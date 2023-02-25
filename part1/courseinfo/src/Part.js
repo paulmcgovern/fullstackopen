@@ -1,11 +1,8 @@
 
 const Part = (props) => {
 
-    return(
-        <p>
-            {props.part.name} {props.part.exercises}
-        </p>
-    )
+    return (props.parts.map((pt, idx) => <p key={idx}>{pt.name} {pt.exercises}</p>))
+   
 }
 
 export default Part
