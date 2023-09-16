@@ -14,13 +14,10 @@ const App = () => {
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [filter, setFilter] = useState('')
-  const [message, setMessage] = useState({message: '', isError: false})
-  const [errState, setErrState] = useState(false)
-
-  const [feedback, setFeedback] = useState({message: '', isError: false})
+   const [feedback, setFeedback] = useState({message: '', isError: false})
 
 
-  const timedFeedback = (msg, isError=false) => {
+  const setTimedFeedback = (msg, isError=false) => {
 
     if(feedback && feedback.tid){
       clearTimeout(feedback.tid)
@@ -42,7 +39,7 @@ const App = () => {
     // Name and number alread stored in list
     if(existingPerson && existingPerson.number === newNumber) {
 
-      setMessage(`${newName} is already added to phonebook.`)
+      setTimedFeedback(`${newName} is already added to phonebook.`, true)
       return
     }
 
@@ -71,14 +68,12 @@ const App = () => {
           })
 
           setPersons(updatedPeople)
-          setErrState(false)
-          setMessage(`Added ${updatedPerson.name}`)
+          setTimedFeedback(`Added ${updatedPerson.name}`)
 
         }).catch((err)=> {
 
           console.error("Error during update", err)
-          setErrState(true)
-          setMessage("Error during update.")
+          setTimedFeedback("Error during update.", true)
 
         }).finally(() => {
 
@@ -105,13 +100,12 @@ const App = () => {
 
         newPerson.id = resPerson.id
         setPersons([...persons, newPerson])
-        timedFeedback(`Added ${newPerson.name}`)
+        setTimedFeedback(`Added ${newPerson.name}`)
 
       }).catch((err)=> {
 
         console.error("Error during create", err)
-        setErrState(true)
-        setMessage("Error during create")
+        setTimedFeedback("Error during create", true)        
 
       }).finally(() => {
 
@@ -139,8 +133,7 @@ const App = () => {
       .catch((err)=> {
 
         console.error("Error fetching list of people.", err)
-        setErrState(true)
-        setMessage("Error fetching list of people.")
+        setTimedFeedback("Error fetching list of people.", true)
       })
   }
 
@@ -155,8 +148,7 @@ const App = () => {
       })
       .catch((err) => {
         console.error("Error during deletion.", err)
-        setErrState(true)
-        setMessage(`Information of ${delPerson.name} has already been removed from server`)
+        setTimedFeedback(`Information of ${delPerson.name} has already been removed from server`, true)
       })
   }
 
