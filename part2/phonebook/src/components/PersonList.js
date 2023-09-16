@@ -1,10 +1,20 @@
 
-
-const PersonList = ({personList, filter}) => {
+const PersonList = ({personList, filter, handleDelete}) => {
 
     if(!personList){
         return
     }
+
+    // Confirm deletion request.
+    // Send to handler to perform
+    // the deletion.
+    const confirmDelete = (person) => {
+
+        if(window.confirm(`Delete ${person.name}?`)){
+            handleDelete(person) 
+        }
+    }
+
 
     let filteredList
 
@@ -31,8 +41,9 @@ const PersonList = ({personList, filter}) => {
         return
     }
 
-    const rendered = filteredList.map((person, idx) => 
-        <li key={"person_" + idx}>{person.name} {person.number}</li>
+    const rendered = filteredList.map((person) => 
+        <li key={"person_" + person.id}>{person.name} {person.number}
+        <button onClick={() => confirmDelete(person)}>Delete</button></li>
     )
     
     return (<ul>{rendered}</ul>)
