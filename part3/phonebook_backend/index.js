@@ -1,11 +1,12 @@
 
 const morgan = require('morgan')
 const express = require('express')
+const cors = require('cors')
 
 
 require('dotenv').config();
 
-const INFO_HTML = "<!DOCTYPE html><html lang='en'><head><title>Info</title></head><body><p>Phonebook has infor for COUNT people.</p><p>DATE</p></body></html>"
+const INFO_HTML = "<!DOCTYPE html><html lang='en'><head><title>Info</title></head><body><p>Phonebook has info for COUNT people.</p><p>DATE</p></body></html>"
 
 PERSON_LIST = [
   { 
@@ -46,8 +47,11 @@ app.use(express.urlencoded({
     extended: true
 }))
 
+// Enable CORS wrapper
+app.use(cors())
+
 app.get("/info", (req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' })
+    res.writeHead(200, { "Content-Type": "text/html" })
     res.end(INFO_HTML.replace("DATE", Date()).replace("COUNT", PERSON_LIST.length))
 })
 
