@@ -1,12 +1,23 @@
 
 const morgan = require('morgan')
 const express = require('express')
-const cors = require('cors')
 
+
+const bodyParser = require('body-parser')
+const cors = require('cors')
 
 require('dotenv').config();
 
 const INFO_HTML = "<!DOCTYPE html><html lang='en'><head><title>Info</title></head><body><p>Phonebook has info for COUNT people.</p><p>DATE</p></body></html>"
+
+// Sanity check: Only allow up to MAX_ITEMS to be 
+// entered into the list of people
+const MAX_ITEMS = 10
+
+// Sanity check: Maximum string parameter length
+const MAX_PARAM_LEN = 80
+
+
 
 PERSON_LIST = [
   { 
@@ -31,6 +42,13 @@ PERSON_LIST = [
   }
 ]
 
+
+const isBadRequest = (req) => {
+    return (PERSON_LIST.length >= MAX_ITEMS ||
+        req.body.name.length > MAX_PARAM_LEN ||
+        req.body.number.length > MAX_PARAM_LEN)
+}
+
 const app = express()
 
 // Log request body on POST
@@ -40,12 +58,16 @@ morgan.token("post-body", function (req, res) {
     }
 })
 
+
 app.use(morgan(":method :url :status :res[content-length] - :response-time ms :post-body"))
 
-// Required for parsing of POST body to objects.
-app.use(express.urlencoded({
-    extended: true
-}))
+// Serve static content from dist
+app.use(express.static('dist'))
+
+// Parse JSON payloads
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
 
 // Enable CORS wrapper
 app.use(cors())
@@ -94,16 +116,58 @@ app.delete("/api/persons/:id", (req, res) => {
     }
 })
 
-app.post("/api/persons", (req, res) => {
+
+app.put("/api/persons/:id", (req, res) => {
+
+    const targetId = req.params.id
+
+    const person = PERSON_LIST.find(p => p.id == targetId)
+
+    if(!person){
+        res.status(404)
+        res.json({"error": "Not found"})
+        return
+    }
 
     if(!req.body || 
         req.body.name === undefined || 
-        req.body.number === undefined ) {
+        req.body.number === undefined ||
+        isBadRequest(req)) {
 
         res.status(400)
         res.json({"error": "Bad request"})
         return
     }
+
+    person.name = req.body.name
+    person.number = req.body.number
+
+    res.json({"messager": "Item updated"})
+})
+
+
+
+app.post("/api/persons", (req, res) => {
+   
+    console.log(req.body)
+
+    if(!req.body || 
+        req.body.name === undefined || 
+        req.body.number === undefined ||
+        isBadRequest(req)) {
+
+        res.status(400)
+        res.json({"error": "Bad request"})
+        return
+    }
+
+    if(PERSON_LIST.length >= MAX_ITEMS ||
+        req.body.name.length > MAX_PARAM_LEN ||
+        req.body.number.length > MAX_PARAM_LEN) {
+
+        res.status(400)
+    }
+
 
     if(PERSON_LIST.some(p => p.name == req.body.name)){
         res.status(400)
@@ -129,6 +193,12 @@ if(!process.env.LISTEN_PORT){
     throw Error("LISTEN_PORT not set.")
 }
 
-app.listen(process.env.LISTEN_PORT)
-console.log(`Server listening on port ${process.env.LISTEN_PORT}`)
+
+
+const port = process.env.LISTEN_PORT || 3000
+
+app.listen(port, () => {
+    console.log(`Server listening on port ${port}`)
+})
+
 
