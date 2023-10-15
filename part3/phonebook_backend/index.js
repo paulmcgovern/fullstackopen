@@ -1,55 +1,53 @@
+/*
 
-const morgan = require('morgan')
-const express = require('express')
+Prevents more than MAX_ITEMS from being inserted into
+the DB or returned from it at one time. This restriction
+is meant to guard against meanies running out my 
+free account.
 
-
-const bodyParser = require('body-parser')
-const cors = require('cors')
-
-require('dotenv').config();
-
-const INFO_HTML = "<!DOCTYPE html><html lang='en'><head><title>Info</title></head><body><p>Phonebook has info for COUNT people.</p><p>DATE</p></body></html>"
+*/
 
 // Sanity check: Only allow up to MAX_ITEMS to be 
 // entered into the list of people
-const MAX_ITEMS = 10
+const MAX_ITEMS = 50
 
 // Sanity check: Maximum string parameter length
-const MAX_PARAM_LEN = 80
+const MAX_PARAM_LEN = 50
 
-
-
-PERSON_LIST = [
-  { 
-    "id": 1,
-    "name": "Arto Hellas", 
-    "number": "040-123456"
-  },
-  { 
-    "id": 2,
-    "name": "Ada Lovelace", 
-    "number": "39-44-5323523"
-  },
-  { 
-    "id": 3,
-    "name": "Dan Abramov", 
-    "number": "12-43-234345"
-  },
-  { 
-    "id": 4,
-    "name": "Mary Poppendieck", 
-    "number": "39-23-6423122"
-  }
-]
-
-
+// Sanity checker
 const isBadRequest = (req) => {
-    return (PERSON_LIST.length >= MAX_ITEMS ||
-        req.body.name.length > MAX_PARAM_LEN ||
-        req.body.number.length > MAX_PARAM_LEN)
+
+    const vals = Object.values(req.body)
+
+    if(vals === undefined || vals.length != 2) {
+        return true
+    }
+
+    return Object.values(req.body).some(val => {
+        if(val === undefined || val.length == 0 || val.length > MAX_PARAM_LEN){
+            return true
+        }
+    })
 }
 
-const app = express()
+// MongoDB ID checker
+const isBadId = (id) => {
+    return !(/^[0-9a-fA-F]{24}$/.test(id))
+}
+
+require("dotenv").config();
+
+const morgan = require("morgan")
+const express = require("express")
+const bodyParser = require("body-parser")
+const cors = require("cors")
+
+// Mondgoose models of 
+// phonebook entries
+const Person = require("./models/Person");
+
+const INFO_HTML = "<!DOCTYPE html><html lang='en'><head><title>Info</title></head><body><p>Phonebook has info for COUNT people.</p><p>DATE</p></body></html>"
+
 
 // Log request body on POST
 morgan.token("post-body", function (req, res) { 
@@ -58,6 +56,8 @@ morgan.token("post-body", function (req, res) {
     }
 })
 
+
+const app = express()
 
 app.use(morgan(":method :url :status :res[content-length] - :response-time ms :post-body"))
 
@@ -68,137 +68,157 @@ app.use(express.static('dist'))
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-
 // Enable CORS wrapper
 app.use(cors())
 
-app.get("/info", (req, res) => {
-    res.writeHead(200, { "Content-Type": "text/html" })
-    res.end(INFO_HTML.replace("DATE", Date()).replace("COUNT", PERSON_LIST.length))
+// HTML info page
+app.get("/info", (req, res, next) => {
+
+    Person.countDocuments({}).then(result => {
+
+        res.writeHead(200, { "Content-Type": "text/html" })
+        res.end(INFO_HTML.replace("DATE", Date()).replace("COUNT", result))
+
+    }).catch(error => next(error))
 })
 
-app.get("/api/persons", (req, res) => {    
-    res.json(PERSON_LIST)
+
+// All entries, up to MAX_ITEMS
+app.get("/api/persons", (req, res, next) => { 
+   
+    Person.find({}).limit(MAX_ITEMS).then(result => {
+    
+        res.json(result)
+
+    }).catch(error => next(error))
 })
 
-app.get("/api/persons/:id", (req, res) => {
+
+// Individual record, by ID
+app.get("/api/persons/:id", (req, res, next) => {
     
     const targetId = req.params.id
-    console.log(`Lookup person ID: '${targetId}'`)
 
-    const person = PERSON_LIST.find(p => p.id == targetId)
-
-    if(!person){
-        res.status(404)
-        res.json({"error": "Not found"})
-    } else {
-        res.json(person)
-    }
-})
-
-app.delete("/api/persons/:id", (req, res) => {
-
-    const targetId = req.params.id
-    console.log(`Lookup person ID: '${targetId}'`)
-
-    const person = PERSON_LIST.find(p => p.id == targetId)
-
-    if(!person){
-
-        res.status(404)
-        res.json({"error": "Not found"})
-
-    } else {
-
-        PERSON_LIST = PERSON_LIST.filter(p => p.id != targetId)
-
-        res.json({"messager": "Item deleted"})
-    }
-})
-
-
-app.put("/api/persons/:id", (req, res) => {
-
-    const targetId = req.params.id
-
-    const person = PERSON_LIST.find(p => p.id == targetId)
-
-    if(!person){
-        res.status(404)
-        res.json({"error": "Not found"})
+    if(isBadId(targetId)){
+        next("Bad ID format")        
         return
     }
 
-    if(!req.body || 
-        req.body.name === undefined || 
-        req.body.number === undefined ||
-        isBadRequest(req)) {
+    Person.findById(targetId).then(person => {
 
-        res.status(400)
-        res.json({"error": "Bad request"})
-        return
-    }
+        if(person) {
+            res.json(person)
+        } else {
+            next("Item not found.")
+        }
 
-    person.name = req.body.name
-    person.number = req.body.number
-
-    res.json({"messager": "Item updated"})
+    }).catch(error => next(error))
 })
 
 
+// Delete item by ID
+app.delete("/api/persons/:id", (req, res, next) => {
 
-app.post("/api/persons", (req, res) => {
+    const targetId = req.params.id
+
+    if(isBadId(targetId)){
+        next("Bad ID format")
+        return
+    }
+ 
+    Person.findByIdAndDelete(targetId).then(person => {
+
+        if(person){
+            res.json({"message": "Item deleted"})
+        } else {
+            next("Item not found")
+        }
+
+    }).catch(error => next(error))
+})
+
+
+// Update person by ID
+app.put("/api/persons/:id", (req, res, next) => {
+
+    const targetId = req.params.id
+
+    if(isBadId(targetId)){
+        next("Bad ID format")        
+        return
+    }
+   
+    if(!req.body || isBadRequest(req)) {
+        next("Bad request")
+        return
+    }
+
+    // Fields to update
+    const updatePerson = {
+        name: req.body.name,
+        number: req.body.number
+    }
+
+    Person.findByIdAndUpdate(targetId, updatePerson).then((person) => {
+     
+        if(person){
+            res.json({"message": "Item Updated"})
+        } else {
+            next("Item not found")
+        }
+
+    }).catch(error => next(error))
+})
+
+
+// Inser new person. Return new ID
+app.post("/api/persons", (req, res, next) => {
    
     console.log(req.body)
 
-    if(!req.body || 
-        req.body.name === undefined || 
-        req.body.number === undefined ||
-        isBadRequest(req)) {
-
-        res.status(400)
-        res.json({"error": "Bad request"})
+    if(!req.body || isBadRequest(req)) {
+        next("Bad parameters.")
         return
     }
 
-    if(PERSON_LIST.length >= MAX_ITEMS ||
-        req.body.name.length > MAX_PARAM_LEN ||
-        req.body.number.length > MAX_PARAM_LEN) {
+    const person = new Person({
+        name: req.body.name,
+        number: req.body.number
+    })
 
-        res.status(400)
-    }
+    // Limit number of items in db
+    Person.countDocuments().then(count => {
 
+        if(count < MAX_ITEMS){
 
-    if(PERSON_LIST.some(p => p.name == req.body.name)){
-        res.status(400)
-        res.json({ error: 'name must be unique' })
-        return
-    }
+            person.save().then((newPerson) => { 
 
-    const newId = Math.floor(Math.random() * (100 - PERSON_LIST.length + 1)) + PERSON_LIST.length
+                res.status(201)
+                res.json({"id": newPerson.id})
+        
+            }).catch(error => next(error))
 
-    newPerson = {
-        "id": newId,
-        "name": req.body.name, 
-        "number": req.body.number
-    }
+        } else {
 
-    PERSON_LIST.push(newPerson)
-
-    res.status(201)
-    res.json({"id": newPerson.id})
+            next("Too many items.")
+        }
+    })
 })
 
-if(!process.env.LISTEN_PORT){
-    throw Error("LISTEN_PORT not set.")
+// Middleware error handler
+const errorHandler = (error, req, res, next) => {
+
+    message = error.message ? error.message: error
+
+    console.error(message)
+
+    return res.status(400).send({error: message})
 }
 
-
+app.use(errorHandler)
 
 const port = process.env.LISTEN_PORT || 3000
 
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`)
 })
-
-
