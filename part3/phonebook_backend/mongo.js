@@ -1,15 +1,15 @@
 /*
 
-Set MongoDB connection URL in environment as MONGO_URL. The 
-URL must contain placeholder "__PASSWORD__".
+Set MongoDB connection URL in environment as MONGO_URL. The
+URL must contain placeholder '__PASSWORD__'.
 
 Parameters:
-    Password
-    Name 
-    Number
+  Password
+  Name
+  Number
 
 If only the password is provided, all the entries in the
-phonebook are printed to the console. If the name and 
+phonebook are printed to the console. If the name and
 number are provided, a new entry in insterted into the DB.
 
 */
@@ -24,8 +24,8 @@ require('dotenv').config()
 mongoose.set('strictQuery',false)
 
 const personSchema = new mongoose.Schema({
-    name: String,
-    number: String
+  name: String,
+  number: String
 })
 
 const Person = mongoose.model('Person', personSchema)
@@ -34,84 +34,86 @@ const Person = mongoose.model('Person', personSchema)
 // Return a promise with all results.
 const getAll = function () {
 
-    return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
 
-        Person.find({}).limit(100).then((result) => {
-            resolve(result)
-        })
+    Person.find({}).limit(100).then((result) => {
+      resolve(result)
     })
+  })
 }
 
 // Save a new Person in DB. Return new record.
 const saveNew = function(name, number) {
 
-    if(name.length === 0 || name.length > MAX_LEN) {
-        return new Promise((resolvbe, reject) => {reject("Bad length for name")})
-    }
+  if(name.length === 0 || name.length > MAX_LEN) {
+    return Promise.reject(new Error('Bad length for name'))
+  }
 
-    if(number.length === 0 || number.length > MAX_LEN) {
-        return new Promise((resolvbe, reject) => {reject("Bad length for number")})
-    }
+  if(number.length === 0 || number.length > MAX_LEN) {
+    return Promise.reject(new Error('Bad length for number'))
+  }
 
-    return new Promise((resolve, reject) => {
-          
-        const person = new Person({
-            name: name,
-            number: number
-        })
+  return new Promise((resolve) => {
 
-        person.save().then((result) => {           
-            resolve(result)
-        })
+    const person = new Person({
+      name: name,
+      number: number
     })
-}  
+
+    person.save().then((result) => {
+      resolve(result)
+    })
+  })
+}
 
 
 const main = async () => {
 
-    // Args are either password only (3), or password, name,
-    // and number (5)
-    if(process.argv.length != 3 && process.argv.length != 5) {
-        throw new Error("Bad command line parameters.")
-    }
+  // Args are either password only (3), or password, name,
+  // and number (5)
+  if(process.argv.length !== 3 && process.argv.length !== 5) {
+    throw new Error('Bad command line parameters.')
+  }
 
-    const password = process.argv[2]
+  const password = process.argv[2]
 
-    const mongoUrl = process.env.MONGO_URL.replace("__PASSWORD__", password)
-    
-    await mongoose.connect(mongoUrl).catch(error => {
-        console.log(`Error: ${error.message}`)
+  const mongoUrl = process.env.MONGO_URL.replace('__PASSWORD__', password)
+
+  await mongoose.connect(mongoUrl).catch(error => {
+    console.log(`Error: ${error.message}`)
+  })
+
+  if(process.argv.length === 3){
+
+    const people = await getAll().catch(error => {
+      console.log(`Failed to fetch people ${error.message}`)
     })
 
-    if(process.argv.length == 3){
+    console.log('Phonebook:')
 
-        const people = await getAll().catch(erorr => {
-            console.log(`Failed to fetch people ${error.message}`)
-        })
+    people.forEach(person => {
+      console.log(`${person.name} ${person.number}`)
+    })
 
-        console.log("Phonebook:")
+  } else if(process.argv.length === 5){
 
-        people.forEach(person => {
-            console.log(`${person.name} ${person.number}`)
-        })
+    const name = process.argv[3]
+    const number = process.argv[4]
 
-    } else if(process.argv.length == 5){
+    const person = await saveNew(name, number).catch(error => {
+      console.log(`Failed to create person ${error}`) //.message}`)
+    })
 
-        const name = process.argv[3]
-        const number = process.argv[4]
-
-        const person = await saveNew(name, number).catch(error => {
-            console.log(`Failed to create person ${error}`) //.message}`)
-        })
-
-        console.log(`added ${person.name} number ${person.number} to phonebook`)
-
-    } else {   
-        throw Error("Bad number of parameters")
+    if(person){
+      console.log(`added ${person.name} number ${person.number} to phonebook`)
     }
 
-    await mongoose.connection.close()
+  } else {
+    throw Error('Bad number of parameters')
+  }
+
+  await mongoose.connection.close()
 }
 
-main() 
+main()
 
