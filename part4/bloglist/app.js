@@ -1,5 +1,6 @@
 
 const express = require('express')
+require('express-async-errors')
 const app = express()
 const cors = require('cors')
 const blogRouter = require('./controllers/blogController')
@@ -19,7 +20,7 @@ mongoose.set('strictQuery',false)
 
 // Parse JSON payloads
 const bodyParser = require('body-parser')
-
+app.use(middleware.reqLogger)
 app.use(cors())
 app.use(express.static('dist'))
 app.use(express.json())
@@ -29,7 +30,6 @@ app.use(bodyParser.urlencoded({ extended: true }))
 
 app.use('/api/blogs', blogRouter)
 
-app.use(middleware.reqLogger)
 app.use(middleware.errorHandler)
 
 module.exports = app

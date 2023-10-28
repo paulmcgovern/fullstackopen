@@ -1,12 +1,11 @@
 
 const morgan = require('morgan')
 
-const logger = require('../utils/logging')
 
 
 const errorHandler = (error, req, res, next) => {
 
-  logger.error(`${error.name}: ${error.message}`)
+  console.error(`${error.name}: ${error.message}`)
 
   if(error && error.name === 'ValidationError') {
 
