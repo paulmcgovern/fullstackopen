@@ -1,7 +1,5 @@
 // Requires MONGO_URL and MONGO_PW set in environment
 
-require('dotenv').config()
-
 const mongoose = require('mongoose')
 
 const blogSchema = new mongoose.Schema({
@@ -27,6 +25,10 @@ const blogSchema = new mongoose.Schema({
     type: Number,
     min: 0,
     default: 0
+  },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 })
 
