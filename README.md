@@ -8,4 +8,5 @@ Solutions to exercises from https://fullstackopen.com/
 * [Part 2](part2/README.md)
 * [Part 3](part3/README.md)
 * [Part 4](part4/README.md)
+* [Part_5](part5/README.md)
 
