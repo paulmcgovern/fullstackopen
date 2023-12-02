@@ -1,8 +1,9 @@
-# React + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Requires **.env** with URLs to the blog and login services, e.g.:
 
-Currently, two official plugins are available:
+* VITE_BLOG_SERVICE=http://localhost:3001
+* VITE_LOGIN_SERVICE=http://localhost:3001
+ 
+These services have been written as solutions to [Part 4](../../part4).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+

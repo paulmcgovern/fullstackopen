@@ -1,15 +1,21 @@
 
-const Message = ({message, isError}) => {
+import PropTypes from 'prop-types'
 
-    if(!message){
-        return
-    }
+const Message = ({ message, isError }) => {
 
-    const className = isError? "error" : "message"
-
-    return (<div className={className}>{message}</div>)
-  
+  if(!message){
+    return
   }
-  
-  export default Message
-  
+
+  const className = isError? 'error' : 'message'
+
+  return (<div className={className}>{message}</div>)
+
+}
+
+Message.propTypes = {
+  message: PropTypes.string.isRequired,
+  isError: PropTypes.bool.isRequired
+}
+
+export default Message

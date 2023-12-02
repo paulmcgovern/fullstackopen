@@ -33,7 +33,7 @@ blogRouter.post('/', userExtractor.userExtractor, async (request, response) => {
   if(!user){
     return response.status(400).json({ error: 'Unknown user' })
   }
-
+console.log("AAAAAAAAAA")
   const blog = new Blog({
     title: request.body.title,
     author: request.body.author,
@@ -41,9 +41,9 @@ blogRouter.post('/', userExtractor.userExtractor, async (request, response) => {
     likes: request.body.likes,
     user: user.id
   })
-
+console.log("BBBBBBBBBBB")
   const result = await(await blog.save()).populate('user', userPopulateFields)
-
+console.log("CCCCCCCCCCCCC")
   response.status(201).json(result)
 })
 
@@ -89,6 +89,47 @@ blogRouter.delete('/:id', userExtractor.userExtractor, async (request, response)
 
   await Blog.findByIdAndRemove(targetId)
   response.status(204).end()
+})
+
+
+blogRouter.put('/:id', userExtractor.userExtractor, async (request, response) => {
+
+  const userToken = request.user
+
+  if(!userToken) {
+    return response.status(400).json({ error: 'Not authorized' })
+  }
+
+  const user = await User.findById(userToken.id)
+
+  if(!user){
+    return response.status(400).json({ error: 'Unknown user' })
+  }
+
+  const targetId = request.params.id
+
+  const blog = await Blog.findById(targetId)
+
+  if(!blog){
+    return response.status(404)
+  }
+
+  if(!user._id.equals(blog.user)){
+    return response.status(400).json({ error: 'Not authorized' })
+  }
+
+  const updateFields = {
+    title: request.body.title,
+    author: request.body.author,
+    url: request.body.url,
+    likes: request.body.likes
+  }
+
+  // Force validation before update
+  const queryOpts = { new: true, runValidators: true, context: 'query' }
+
+  const updatedBlog = await Blog.findByIdAndUpdate(blog.id, updateFields, queryOpts) 
+  response.json(updatedBlog)
 })
 
 module.exports = blogRouter
