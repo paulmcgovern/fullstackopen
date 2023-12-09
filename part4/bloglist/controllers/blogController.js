@@ -33,7 +33,7 @@ blogRouter.post('/', userExtractor.userExtractor, async (request, response) => {
   if(!user){
     return response.status(400).json({ error: 'Unknown user' })
   }
-console.log("AAAAAAAAAA")
+
   const blog = new Blog({
     title: request.body.title,
     author: request.body.author,
@@ -41,9 +41,9 @@ console.log("AAAAAAAAAA")
     likes: request.body.likes,
     user: user.id
   })
-console.log("BBBBBBBBBBB")
+
   const result = await(await blog.save()).populate('user', userPopulateFields)
-console.log("CCCCCCCCCCCCC")
+
   response.status(201).json(result)
 })
 
@@ -84,7 +84,7 @@ blogRouter.delete('/:id', userExtractor.userExtractor, async (request, response)
   }
 
   if(!user._id.equals(blog.user)){
-    return response.status(400).json({ error: 'Not authorized' })
+    return response.status(401).json({ error: 'Not authorized' })
   }
 
   await Blog.findByIdAndRemove(targetId)

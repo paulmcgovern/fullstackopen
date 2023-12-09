@@ -49,8 +49,6 @@ beforeEach(async () => {
 
   await Blog.deleteMany({})
   await Blog.insertMany(testBlogs)
-
-  console.log("BLOGS", testBlogs)
 })
 
 const getAuthHeader = async (api, username='user', password='password') => {
@@ -59,11 +57,11 @@ const getAuthHeader = async (api, username='user', password='password') => {
     username: username,
     password: password
   })
-  console.log("TOKEN", token.body)
+
   return { 'Authorization': `Bearer ${token.body.token}` }
 }
 
-/*
+
 describe('Test GET', () => {
 
   test('Blogs are returned as json', async () => {
@@ -179,7 +177,7 @@ describe('Test POST', () => {
   })
 
 })
-*/
+
 
 describe('Test DELETE', () => {
 
@@ -188,8 +186,6 @@ describe('Test DELETE', () => {
     const authHeader = await getAuthHeader(api)
 
     const res = await api.post('/api/blogs').set(authHeader).send(blogValues).expect(201)
-    console.log("AAAA", authHeader)
-    console.log("BBBB", res.body.id)
 
     await api.delete(`/api/blogs/${res.body.id}`).set(authHeader).expect(204)
 
@@ -197,8 +193,6 @@ describe('Test DELETE', () => {
 
   }, 10000)
 
-  // TODO: test delete User ID mismatch
-/*
   test('Test DELETE no token', async () => {
 
     const authHeader = await getAuthHeader(api)
@@ -209,7 +203,27 @@ describe('Test DELETE', () => {
 
     await api.get(`/api/blogs/${res.body.id}`).expect(200)
 
-  }, 10000)*/
+  }, 10000)
+
+  test('Test DELETE different token', async () => {
+
+    const authHeader = await getAuthHeader(api)
+
+    const res = await api.post('/api/blogs').set(authHeader).send(blogValues).expect(201)
+
+    const anotherUser = new User({
+      username: 'user2',
+      name: 'Blog Test User2',
+      passwordHash: await bcrypt.hash('password', 10)
+    })
+
+    await anotherUser.save()
+
+    const anotherAuthHeader = await getAuthHeader(api, 'user2', 'password')
+
+    await api.delete(`/api/blogs/${res.body.id}`).set(anotherAuthHeader).expect(401)
+    await api.get(`/api/blogs/${res.body.id}`).expect(200)
+  })
 })
 
 /*
